@@ -95,48 +95,4 @@ namespace flash {
       GLOG_DEBUG("choosing blk_size=", cblk_size);
     }
   }
-
-  // to be run in DEBUG mode only
-  inline void verify_csr_block(const SparseBlock &blk,
-                               bool               one_based_indexing) {
-    GLOG_ASSERT_LE(blk.blk_size, blk.nrows);
-    GLOG_ASSERT_LE(blk.start, blk.nrows);
-    GLOG_ASSERT_LE(blk.start + blk.blk_size, blk.nrows);
-    GLOG_ASSERT_NOT_NULL(blk.offs);
-    GLOG_ASSERT_NOT_NULL(blk.idxs_ptr);
-    GLOG_ASSERT_NOT_NULL(blk.vals_ptr);
-
-    if (one_based_indexing) {
-      GLOG_ASSERT_EQ(blk.offs[0], (MKL_INT) 1);
-    } else {
-      GLOG_ASSERT_EQ(blk.offs[0], (MKL_INT) 0);
-    }
-
-    FBLAS_UINT nnzs_processed = 0;
-    for (FBLAS_UINT i = 0; i < blk.blk_size; i++) {
-      FBLAS_UINT row_offset = blk.offs[i] - blk.offs[0];
-      FBLAS_UINT row_nnzs = blk.offs[i + 1] - blk.offs[i];
-      nnzs_processed += row_nnzs;
-      MKL_INT *row_idxs_ptr = blk.idxs_ptr + row_offset;
-
-      // assert col indices are sorted
-      for (FBLAS_UINT j = 0; j < row_nnzs - 1; j++) {
-        if (one_based_indexing) {
-          GLOG_ASSERT_LE((FBLAS_UINT) row_idxs_ptr[j], blk.ncols);
-        } else {
-          GLOG_ASSERT_LT((FBLAS_UINT) row_idxs_ptr[j], blk.ncols);
-        }
-        GLOG_ASSERT_LE(row_idxs_ptr[j], row_idxs_ptr[j + 1]);
-      }
-      if (one_based_indexing) {
-        GLOG_ASSERT_LE((FBLAS_UINT) row_idxs_ptr[row_nnzs - 1], blk.ncols);
-      } else {
-        GLOG_ASSERT_LT((FBLAS_UINT) row_idxs_ptr[row_nnzs - 1], blk.ncols);
-      }
-    }
-
-    GLOG_ASSERT_EQ(nnzs_processed,
-                   (FBLAS_UINT)(blk.offs[blk.blk_size] - blk.offs[0]));
-    GLOG_DEBUG("CSR Block Verification passed");
-  }
 }  // namespace flash

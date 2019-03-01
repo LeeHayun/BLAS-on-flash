@@ -3,11 +3,19 @@
 
 #include <chrono>
 #include <fstream>
-#include "mkl.h"
+//#include "mkl.h"
+#include <cblas.h>
 #include "types.h"
 #include "utils.h"
 
+#include "arm_compute/core/Types.h"
+#include "arm_compute/runtime/NEON/NEFunctions.h"
+#include "arm_compute/runtime/NEON/NEScheduler.h"
+//#include "utils/Utils.h"
+
 using namespace std::chrono;
+using namespace arm_compute;
+//using namespace utils;
 
 flash::Logger logger("in_mem");
 
@@ -35,9 +43,10 @@ int main(int argc, char** argv) {
   FBLAS_UINT lda_b = (FBLAS_UINT) std::stol(argv[13]);
   FBLAS_UINT lda_c = (FBLAS_UINT) std::stol(argv[14]);
 
-  float* mat_A = (float*) mkl_malloc(m * k * sizeof(float), 4096);
-  float* mat_B = (float*) mkl_malloc(n * k * sizeof(float), 4096);
-  float* mat_C = (float*) mkl_malloc(m * n * sizeof(float), 4096);
+  float* mat_A = (float*) malloc(m * k * sizeof(float));
+  float* mat_B = (float*) malloc(n * k * sizeof(float));
+  float* mat_C = (float*) malloc(m * n * sizeof(float));
+  float* mat_output = (float*) malloc(m * n * sizeof(float));
 
   LOG_INFO(logger, "Reading matrix A into memory");
   std::ifstream a_file(A_name, std::ios::binary);
@@ -52,6 +61,26 @@ int main(int argc, char** argv) {
   c_file.read((char*) mat_C, m * n * sizeof(float));
   c_file.close();
 
+  Tensor tensor_A, tensor_B, tensor_C;
+  Tensor tensor_output;
+
+  LOG_INFO(logger, "Tensor allcator init");
+  tensor_A.allocator()->init(TensorInfo(TensorShape(k, m), 1, DataType::F32));
+  tensor_B.allocator()->init(TensorInfo(TensorShape(n, k), 1, DataType::F32));
+  tensor_C.allocator()->init(TensorInfo(TensorShape(n, m), 1, DataType::F32));
+  tensor_output.allocator()->init(TensorInfo(TensorShape(n, m), 1, DataType::F32));
+
+  LOG_INFO(logger, "Tensor allocator import memory");
+  tensor_A.allocator()->import_memory(mat_A, m * k * sizeof(float));
+  tensor_B.allocator()->import_memory(mat_B, n * k * sizeof(float));
+  tensor_C.allocator()->import_memory(mat_C, m * n * sizeof(float));
+  tensor_C.allocator()->import_memory(mat_output, m * n * sizeof(float));
+  //tensor_output.allocator()->allocate();
+
+  LOG_INFO(logger, "GEMM configure");
+  NEGEMM gemm;
+  gemm.configure(&tensor_A, &tensor_B, &tensor_C, &tensor_output, alpha, beta);
+
   LOG_DEBUG(logger, "dimensions : A = ", m, "x", k, ", B = ", k, "x", n);
   LOG_INFO(logger, "Starting sgemm call");
 
@@ -61,23 +90,32 @@ int main(int argc, char** argv) {
   // execute gemm call
 
   high_resolution_clock::time_point t1 = high_resolution_clock::now();
+  gemm.run();
+  /*
   mkl_gemm(mat_ord, trans_a, trans_b,          // ordering
            m, n, k,                            // sizes
            alpha, mat_A, lda_a, mat_B, lda_b,  // input
            beta, mat_C, lda_c);                // output
+  */
   high_resolution_clock::time_point t2 = high_resolution_clock::now();
   duration<double> span = duration_cast<duration<double>>(t2 - t1);
   LOG_INFO(logger, "gemm() took ", span.count());
 
   LOG_INFO(logger, "Writing C to file");
-  std::ofstream cout_file(C_name, std::ios::binary);
-  cout_file.write((char*) mat_C, m * n * sizeof(float));
+  std::ofstream cout_file("result.mtx", std::ios::binary);
+  cout_file.write((char*) mat_output, m * n * sizeof(float));
   cout_file.close();
 
+  // Print result
+  for (int i = 0; i < m * n; i++) {
+    printf("%f\n", mat_output[i]);
+  }
+
   // free memory
-	mkl_free(mat_A);
-	mkl_free(mat_B);
-	mkl_free(mat_C);
+  free(mat_A);
+  free(mat_B);
+  free(mat_C);
+  free(mat_output);
 
   return 0;
 }
