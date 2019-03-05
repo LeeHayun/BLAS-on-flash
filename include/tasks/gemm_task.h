@@ -8,12 +8,18 @@
 #include "types.h"
 #include "utils.h"
 
+#include "arm_compute/core/Types.h"
+#include "arm_compute/runtime/NEON/NEFunctions.h"
+#include "arm_compute/runtime/NEON/NEScheduler.h"
+#include "cblas.h"
+using namespace arm_compute;
+
 namespace flash {
   // C = alpha*A*B + beta*C
   class GemmTask : public BaseTask {
     flash_ptr<FPTYPE>       matA, matB, matC;
-    MKL_INT                 a_nrows, a_ncols, b_ncols;
-    MKL_INT                 lda_a, lda_b, lda_c;
+    int                     a_nrows, a_ncols, b_ncols;
+    int                     lda_a, lda_b, lda_c;
     FPTYPE                  alpha, beta;
     decltype(CblasNoTrans)  trans_a, trans_b;
     decltype(CblasRowMajor) mat_ord;
@@ -67,7 +73,7 @@ namespace flash {
     void execute() {
       static std::atomic<FBLAS_UINT> cnt(0);
       GLOG_DEBUG("Executing tsk#", cnt.fetch_add(1));
-      mkl_set_num_threads_local(GEMM_MKL_NTHREADS);
+      // mkl_set_num_threads_local(GEMM_MKL_NTHREADS);
       FPTYPE* a_ptr = (FPTYPE*) in_mem_ptrs[matA];
       FPTYPE* b_ptr = (FPTYPE*) in_mem_ptrs[matB];
       FPTYPE* c_ptr = (FPTYPE*) in_mem_ptrs[matC];
@@ -84,10 +90,52 @@ namespace flash {
       // print_matrix(c_ptr, a_nrows, b_ncols, "C bef");
 
       // Determine parameters for MKL call
+      /*
       mkl_gemm(mat_ord, trans_a, trans_b,          // ordering
                a_nrows, b_ncols, a_ncols,          // sizes
                alpha, a_ptr, lda_a, b_ptr, lda_b,  // input
                beta, c_ptr, lda_c);                // output
+      */
+      Tensor     tensor_a, tensor_b, tensor_c, tensor_tmp;
+      TensorInfo info_a, info_b, info_c, info_tmp;
+      NEGEMM     gemm;
+
+      info_a.init(TensorShape(a_ncols, a_nrows), 1, DataType::F32,
+                  Strides(1, lda_a * sizeof(float)), 0, a_ncols * a_nrows);
+      info_b.init(TensorShape(b_ncols, a_ncols), 1, DataType::F32,
+                  Strides(1, lda_b * sizeof(float)), 0, b_ncols * a_ncols);
+      info_c.init(TensorShape(b_ncols, a_nrows), 1, DataType::F32,
+                  Strides(1, lda_c * sizeof(float)), 0, b_ncols * a_nrows);
+      info_tmp = TensorInfo(TensorShape(b_ncols, a_nrows), 1, DataType::F32);
+
+      tensor_a.allocator()->init(info_a);
+      tensor_b.allocator()->init(info_b);
+      tensor_c.allocator()->init(info_c);
+      tensor_tmp.allocator()->init(info_tmp);
+
+      tensor_a.allocator()->import_memory(a_ptr,
+                                          a_ncols * a_nrows * sizeof(float));
+      tensor_b.allocator()->import_memory(b_ptr,
+                                          b_ncols * a_ncols * sizeof(float));
+      tensor_c.allocator()->import_memory(c_ptr,
+                                          b_ncols * a_nrows * sizeof(float));
+      tensor_tmp.allocator()->allocate();
+
+      gemm.configure(&tensor_a, &tensor_b, &tensor_c, &tensor_tmp, alpha, beta);
+      gemm.run();
+
+      Window c_window;
+      c_window.use_tensor_dimensions(tensor_c.info()->tensor_shape(),
+                                     Window::DimY);
+      Iterator c_it(&tensor_c, c_window);
+      float*   tmp_ptr = (float*) tensor_tmp.buffer();
+
+      execute_window_loop(c_window,
+                          [&](const Coordinates& id) {
+                            memcpy(c_it.ptr(), tmp_ptr + id.y() * a_nrows,
+                                   a_nrows * sizeof(float));
+                          },
+                          c_it);
 
       // print_matrix(c_ptr, a_nrows, b_ncols, "C aft");
     }

@@ -17,8 +17,8 @@ int main(int argc, char** argv) {
   if (argc != 15) {
     LOG_INFO(logger,
              "Usage Mode : <exec> <mat_A_file> <mat_B_file> <mat_C_file> "
-             "<A_nrows> <A_ncols> <B_ncols> <alpha> <beta> <a transpose?> <b "
-             "transpose?> <matr order> <lda_a> <lda_b> <lda_c>");
+             "<A_nrows> <A_ncols> <B_ncols> <alpha> <beta> <a transpose?>"
+             "<b transpose?> <matr order> <lda_a> <lda_b> <lda_c>");
     LOG_FATAL(logger, "expected 14 args, got ", argc - 1);
   }
 
