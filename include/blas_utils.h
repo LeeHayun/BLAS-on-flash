@@ -10,11 +10,11 @@
 namespace flash {
   struct SparseBlock {
     // Offsets (Row/Col)
-    MKL_INT *offs = nullptr;
+    int *offs = nullptr;
 
     // Bon-zero indices (on flash)
-    flash_ptr<MKL_INT> idxs_fptr;
-    MKL_INT *          idxs_ptr = nullptr;
+    flash_ptr<int> idxs_fptr;
+    int *          idxs_ptr = nullptr;
 
     // Non-zero vals (on flash)
     flash_ptr<FPTYPE> vals_fptr;
@@ -22,12 +22,12 @@ namespace flash {
 
     // BLOCK DESCRIPTORS
     // Block start (Row/Col)
-    MKL_INT start;
+    int start;
     // Matrix Dims (CSR/CSC)
-    MKL_INT nrows;
-    MKL_INT ncols;
+    int nrows;
+    int ncols;
     // Block size (Row/Col)
-    MKL_INT blk_size;
+    int blk_size;
 
     SparseBlock() {
       this->offs = nullptr;
@@ -69,8 +69,8 @@ namespace flash {
   }
 
   // for sparse matrices in CSR format only
-  inline FBLAS_UINT get_next_blk_size(MKL_INT *offs_ptr, MKL_INT nrows,
-                                      MKL_INT min_size, MKL_INT max_size) {
+  inline FBLAS_UINT get_next_blk_size(int *offs_ptr, int nrows, int min_size,
+                                      int max_size) {
     FBLAS_UINT max_nnzs = MAX_NNZS;
     FBLAS_UINT blk_size = min_size;
     while (blk_size < (FBLAS_UINT) nrows &&
@@ -81,7 +81,7 @@ namespace flash {
     return std::min(blk_size, (FBLAS_UINT) max_size);
   }
 
-  inline void fill_blocks(MKL_INT *offs, FBLAS_UINT n_rows,
+  inline void fill_blocks(int *offs, FBLAS_UINT n_rows,
                           std::vector<FBLAS_UINT> &blk_sizes,
                           std::vector<FBLAS_UINT> &offsets,
                           FBLAS_UINT min_blk_size, FBLAS_UINT max_blk_size) {
