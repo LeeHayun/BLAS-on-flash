@@ -2,8 +2,8 @@
 // Licensed under the MIT license.
 
 #include "scheduler/cache.h"
+#include "tasks/gemm_task.h"
 #include "timer.h"
-
 namespace {
   void print_keys_if_not_empty(
       std::unordered_map<flash::Key, flash::Value> &map) {
@@ -408,7 +408,7 @@ namespace flash {
         GLOG_DEBUG("write-back:n_refs=", v.n_refs);
       }
       v.n_refs--;
-
+ 
       // deprecate from active -> zero-ref
       if (v.n_refs == 0) {
         if (this->single_use_discard) {

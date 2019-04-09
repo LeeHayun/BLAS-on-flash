@@ -13,9 +13,11 @@ namespace flash {
 
   template<typename T>
   struct flash_ptr {
-    T*              ptr;
+    T* ptr;
+    //    int             dummy1;
     FBLAS_UINT      foffset;  // offset from start of file
     BaseFileHandle* fop;      // associated file handle
+                              //    int             dummy2;
 
     flash_ptr() : ptr(nullptr), foffset(0), fop(nullptr) {
     }

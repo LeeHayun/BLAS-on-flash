@@ -198,7 +198,6 @@ namespace flash {
 
     // flush cache
     sched.flush_cache();
-
     return 0;
   }
 }  // namespace flash

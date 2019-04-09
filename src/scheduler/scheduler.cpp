@@ -80,6 +80,9 @@ namespace flash {
     // returns `true` if all parents are not complete
     const std::function<bool(BaseTask*)> wait_keep_fn = [this](BaseTask* tsk) {
       this->c_rec.remove_complete(tsk->get_parents());
+      //for (auto ptsk : tsk->get_parents()) {
+      //  GLOG_INFO("[parent id] ", ptsk);
+      //}
       return !(tsk->get_parents().empty());
     };
 
@@ -115,13 +118,32 @@ namespace flash {
         break;
       }
 
+      // DEBUG MESSAGE START -- Jo GH  // 
+      GLOG_INFO("[wait_tsks] ", this->wait_tsks.size());
+      GLOG_INFO("[prio] ", this->prio.size());
+      GLOG_INFO("[alloced_tsks] ", this->alloced_tsks.size());
+      GLOG_INFO("[compute_queue] ", this->compute_queue.size());
+      GLOG_INFO("[complete_queue] ", this->complete_queue.size());
+
+      for (auto temptsk : this->wait_tsks.iter()) {
+        //printf("\n");
+        GLOG_INFO("[wait_tsk_id] ", temptsk->task_id);
+        auto parents = temptsk->get_parents();
+        for (auto ptsk : parents) {
+          GLOG_INFO("[parent_id] ", ptsk);
+        }
+      }
+      // DEBUG MESSAGE END -- Jo GH // 
+
       // * mark complete all in `complete_queue`
       // * add `tsk->next` into `wait_tsks` if `tsk->next` is `NOT nullptr`
       FBLAS_UINT n_completions = 0;
       BaseTask*  tsk = this->complete_queue.pop();
+
       while (tsk != nullptr) {
         n_completions++;
         tsks_in_mem--;
+        GLOG_DEBUG("complete_queue.pop:", tsk->get_id()); // INSERTED -- Jo GH
         this->c_rec.mark_complete(tsk->get_id());
         this->cache.release(tsk);
         tsk->set_status(Complete);
@@ -255,9 +277,10 @@ namespace flash {
             this->compute_queue.wait_for_push_notify();
           }
         } else {
-          GLOG_DEBUG("executing tsk_id=", tsk->get_id());
+          GLOG_INFO("executing tsk_id=", tsk->get_id());
           tsk->set_status(Compute);
           tsk->execute();
+          printf("\n\n\n\n\n\nTASK %d COMPLETE\n\n\n\n\n", tsk->get_); //INSERTED -- Jo GH
           this->complete_queue.push(tsk);
         }
       }

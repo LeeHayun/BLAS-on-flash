@@ -55,6 +55,10 @@ namespace flash {
       lk.unlock();
     }
 
+    std::vector<T> iter() {
+      return this->vec;
+    }
+
     template<class Iterator>
     void insert(Iterator iter_begin, Iterator iter_end) {
       mutex_locker lk(this->mut);

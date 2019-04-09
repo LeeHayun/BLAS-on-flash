@@ -14,9 +14,15 @@
 #define FP_SINGLE_PRECISION
 
 // USE 64-bit INT and UINT values by default
+#ifdef _32BIT_MACHINE
+typedef int32_t  FBLAS_INT;
+typedef uint32_t FBLAS_UINT;
+typedef char     CHAR;
+#else
 typedef int64_t  FBLAS_INT;
 typedef uint64_t FBLAS_UINT;
 typedef char     CHAR;
+#endif
 
 #ifdef FP_SINGLE_PRECISION
 typedef float  FPTYPE;

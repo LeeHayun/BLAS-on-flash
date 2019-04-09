@@ -56,13 +56,13 @@ namespace flash {
     virtual void execute() = 0;
     void add_read(flash_ptr<void> fptr, StrideInfo& sinfo) {
       GLOG_DEBUG("adding read=", std::string(sinfo));
-      GLOG_ASSERT_LT(sinfo.len_per_stride, ((FBLAS_UINT) 1 << 35));
+      GLOG_ASSERT_LT(sinfo.len_per_stride, ((FBLAS_UINT) 1 << 31));  // ori: 35
       this->read_list.push_back(std::make_pair(fptr, sinfo));
     }
 
     void add_write(flash_ptr<void> fptr, StrideInfo& sinfo) {
       GLOG_DEBUG("adding write=", std::string(sinfo));
-      GLOG_ASSERT_LT(sinfo.len_per_stride, ((FBLAS_UINT) 1 << 35));
+      GLOG_ASSERT_LT(sinfo.len_per_stride, ((FBLAS_UINT) 1 << 31));  // ori: 35
       this->write_list.push_back(std::make_pair(fptr, sinfo));
     }
 

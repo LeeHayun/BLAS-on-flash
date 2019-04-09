@@ -16,7 +16,7 @@ namespace flash {
     uint64_t hash_value = 0;
 
     Key(flash_ptr<void> fptr, StrideInfo sinfo) : fptr(fptr), sinfo(sinfo) {
-      this->hash_value = flash::fnv64a((const char *) this,
+      this->hash_value = flash::fnv32a((const char *) this,
                                        sizeof(Key) - sizeof(this->hash_value));
     }
 

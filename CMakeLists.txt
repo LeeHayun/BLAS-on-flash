@@ -36,14 +36,14 @@ project(blas-on-flash)
 # REDUCE_BLK_SIZE=[262144]		: # of elements per reduce task invocation
 
 set(N_IO_THR 4 CACHE STRING "")
-set(PROGRAM_BUDGET 8589934592 CACHE STRING "")
+set(PROGRAM_BUDGET 268435456 CACHE STRING "")
 set(N_COMPUTE_THR 4 CACHE STRING "")
 set(MAX_SIMUL_REQS 4096 CACHE STRING "")
 set(MAX_STRIDES 4096 CACHE STRING "")
 set(MAX_EVENTS 4096 CACHE STRING "")
 set(SECTOR_LEN 512 CACHE STRING "")
 set(IS_ALIGNED IS_512_ALIGNED CACHE STRING "")
-set(GEMM_BLK_SIZE 8192 CACHE STRING "")
+set(GEMM_BLK_SIZE 128 CACHE STRING "")
 set(GEMM_MKL_NTHREADS 4 CACHE STRING "")
 set(OMP_CHUNK_SIZE 32768 CACHE STRING "")
 set(MAX_NNZS 10000000 CACHE STRING "")
@@ -64,13 +64,15 @@ add_definitions(-DN_IO_THR=${N_IO_THR}
                 -DMAX_NNZS=${MAX_NNZS}
                 -DMAP_BLK_SIZE=${MAP_BLK_SIZE}
                 -DOVERLAP_CHECK=${OVERLAP_CHECK}
+								-D_32BIT_MACHINE=1
                 )
 
 # Compiler options
 set(CXX g++)
 
 # CXX Config
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG -O0 -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+#set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG -O0 -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -DDEBUG -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 add_compile_options(-std=c++14 -Wall ${CONFIG_FLAGS} -fopenmp -Wfatal-errors)
 
@@ -84,7 +86,7 @@ add_compile_options(-std=c++14 -Wall ${CONFIG_FLAGS} -fopenmp -Wfatal-errors)
 #link_libraries(mkl_intel_ilp64 mkl_intel_thread mkl_core iomp5 pthread m dl)
 
 #ACL Config
-set(ACL_ROOT /home/odroid/ACL18.11_original)
+set(ACL_ROOT /home/odroid/Desktop/18.11)
 include_directories(include ${ACL_ROOT} ${ACL_ROOT}/include)
 link_libraries(arm_compute arm_compute_core pthread OpenCL)
 
@@ -102,11 +104,11 @@ link_libraries(fblas)
 
 # Generate drivers
 add_executable(in_mem_gemm_driver drivers/in_mem_gemm.cpp)
-add_executable(mmap_gemm_driver drivers/mmap_gemm.cpp)
+#add_executable(mmap_gemm_driver drivers/mmap_gemm.cpp)
 add_executable(gemm_driver drivers/gemm.cpp)
-
+add_executable(print print.cpp)
 # Generate tests/misc related stuff
-add_executable(flash_file_handle_test misc/flash_file_handle_test.cpp)
-add_executable(dense_create misc/dense_create.cpp misc/gen_common.h)
+#add_executable(flash_file_handle_test misc/flash_file_handle_test.cpp)
+#add_executable(dense_create misc/dense_create.cpp misc/gen_common.h)
 
 add_custom_command(TARGET fblas PRE_BUILD COMMAND clang-format-4.0 -i ../include/*.h ../include/*/*.h ../src/*.cpp ../src/*/*.cpp ../misc/*.cpp ../drivers/*.cpp)
