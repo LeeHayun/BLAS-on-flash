@@ -104,15 +104,9 @@ namespace flash {
       TensorInfo info_a, info_b, info_c, info_tmp;
       NEGEMM     gemm;
 
-      info_a.init(TensorShape(a_ncols, a_nrows), 1, DataType::F32,
-                  Strides(sizeof(float), lda_a * sizeof(float)), 0,
-                  a_ncols * a_nrows * sizeof(float));
-      info_b.init(TensorShape(b_ncols, a_ncols), 1, DataType::F32,
-                  Strides(sizeof(float), lda_b * sizeof(float)), 0,
-                  b_ncols * a_ncols * sizeof(float));
-      info_c.init(TensorShape(b_ncols, a_nrows), 1, DataType::F32,
-                  Strides(sizeof(float), lda_c * sizeof(float)), 0,
-                  b_ncols * a_nrows * sizeof(float));
+      info_a.init(TensorShape(a_ncols, a_nrows), 1, DataType::F32);
+      info_b.init(TensorShape(b_ncols, a_ncols), 1, DataType::F32);
+      info_c.init(TensorShape(b_ncols, a_nrows), 1, DataType::F32);
       info_tmp = TensorInfo(TensorShape(b_ncols, a_nrows), 1, DataType::F32);
 
       tensor_a.allocator()->init(info_a);
@@ -120,6 +114,7 @@ namespace flash {
       tensor_c.allocator()->init(info_c);
       tensor_tmp.allocator()->init(info_tmp);
 
+      gemm.configure(&tensor_a, &tensor_b, &tensor_c, &tensor_tmp, alpha, beta);
       tensor_a.allocator()->import_memory(a_ptr,
                                           a_ncols * a_nrows * sizeof(float));
       tensor_b.allocator()->import_memory(b_ptr,
@@ -129,7 +124,6 @@ namespace flash {
       tensor_tmp.allocator()->import_memory(tmp_ptr,
                                             b_ncols * a_nrows * sizeof(float));
 
-      gemm.configure(&tensor_a, &tensor_b, &tensor_c, &tensor_tmp, alpha, beta);
       gemm.run();
 
       /* Init Window */
@@ -147,6 +141,7 @@ namespace flash {
                           c_it);
 
       // print_matrix(c_ptr, a_nrows, b_ncols, "C aft");
+      free(tmp_ptr);
     }
 
     FBLAS_UINT size() {
